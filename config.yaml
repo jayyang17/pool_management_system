@@ -1,0 +1,4 @@
+dataset:
+  path: "/content/data"
+  train: "train/images"
+  val: "validation/images"
