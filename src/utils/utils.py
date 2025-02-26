@@ -116,8 +116,7 @@ def create_yolo_data_yaml(
         classes_txt_path,  
         output_yaml_path,
         train_path="train/images",
-        val_path="validation/images"
-        ): 
+        val_path="validation/images"): 
     
     """Creates a YOLO data.yaml file."""
     try:
@@ -139,3 +138,63 @@ def create_yolo_data_yaml(
         print(f"File not found: {classes_txt_path}")
     except Exception as e:
         print(f"Error: {e}")
+
+def save_model(source_train_dir="/content/runs/detect/train",
+               model_weights="best.pt",
+               output_dir="/content/model"):
+    """
+    Saves trained YOLO model weights and training results.
+    """
+
+    output_dir = Path(output_dir)
+    source_train_dir = Path(source_train_dir)
+
+    # Ensure source directory exists
+    if not source_train_dir.exists():
+        raise FileNotFoundError(f"Source train directory not found: {source_train_dir}")
+
+    # Create the model output directory if it doesn’t exist
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy the best model weights
+    best_model_path = source_train_dir / "weights" / model_weights
+    if best_model_path.exists():
+        shutil.copy(best_model_path, output_dir / "model.pt")
+    else:
+        raise FileNotFoundError(f"Model weights not found: {best_model_path}")
+
+    # Copy entire training folder
+    train_copy_path = output_dir / "train"
+    if train_copy_path.exists():
+        shutil.rmtree(train_copy_path)  # Remove if it already exists
+    shutil.copytree(source_train_dir, train_copy_path)
+
+    print(f"Model files saved successfully at: {output_dir}")
+
+
+def zip_model(output_dir="/content/model", zip_path="/content/model.zip"):
+    """
+    Zips the saved YOLO model and training results.
+    """
+
+    output_dir = Path(output_dir)
+    zip_path = Path(zip_path)
+
+    if not output_dir.exists():
+        raise FileNotFoundError(f"Model directory not found: {output_dir}")
+
+    # Create the zip file
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+        # Add model.pt
+        model_file = output_dir / "model.pt"
+        if model_file.exists():
+            zipf.write(model_file, arcname="model.pt")
+        else:
+            print(f"Warning: {model_file} not found, skipping model.pt in zip.")
+
+        # Add train directory recursively
+        train_copy_path = output_dir / "train"
+        for file in train_copy_path.rglob("*"):
+            zipf.write(file, arcname=str(file.relative_to(output_dir)))
+
+    print(f"Model zipped successfully at: {zip_path}")
