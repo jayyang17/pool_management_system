@@ -44,10 +44,6 @@ def split_train_val(input_image_path, input_label_path, train_percent=0.8, outpu
     """
     Splits image and annotation files into train and validation sets.
     """
-    if not os.path.isdir(input_image_path):
-        raise FileNotFoundError(f"Directory not found: {input_image_path}")
-    if not os.path.isdir(input_label_path):
-        raise FileNotFoundError(f"Directory not found: {input_label_path}")
     if not (0.01 <= train_percent <= 0.99):
         raise ValueError(f"Invalid train_percent: {train_percent}. Must be between 0.01 and 0.99")
 
