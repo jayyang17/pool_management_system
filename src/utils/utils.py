@@ -40,7 +40,7 @@ def write_yaml(data, file_path):
     except Exception as e:
         raise RuntimeError(f"Error writing YAML file {file_path}: {e}")
 
-def split_train_val(data_path, train_percent=0.8, output_dir="data"):
+def split_train_val(data_path, train_percent=0.8, output_dir=os.getcwd()):
     """
     Splits image and annotation files into train and validation sets.
     """
@@ -60,10 +60,11 @@ def split_train_val(data_path, train_percent=0.8, output_dir="data"):
         raise FileNotFoundError(f"Label directory not found: {input_label_path}")
 
     # Define paths to train/val images and labels
-    train_img_path = os.path.join(output_dir, "train/images")
-    train_txt_path = os.path.join(output_dir, "train/labels")
-    val_img_path = os.path.join(output_dir, "validation/images")
-    val_txt_path = os.path.join(output_dir, "validation/labels")
+    
+    train_img_path = os.path.join(output_dir,'data/train/images')
+    train_txt_path = os.path.join(output_dir,'data/train/labels')
+    val_img_path = os.path.join(output_dir,'data/validation/images')
+    val_txt_path = os.path.join(output_dir,'data/validation/labels')
 
     # Create output directories
     os.makedirs(output_dir, exist_ok=True)
