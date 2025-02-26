@@ -40,13 +40,6 @@ def write_yaml(data, file_path):
     except Exception as e:
         raise RuntimeError(f"Error writing YAML file {file_path}: {e}")
 
-
-import os
-import random
-import shutil
-from pathlib import Path
-import logging
-
 def split_train_val(data_path, train_percent=0.8, output_dir="data"):
     """
     Splits image and annotation files into train and validation sets.
@@ -82,12 +75,12 @@ def split_train_val(data_path, train_percent=0.8, output_dir="data"):
     img_file_list = [f for f in Path(input_image_path).rglob("*") if f.suffix.lower() in img_extensions]
     txt_file_list = [f for f in Path(input_label_path).rglob("*") if f.suffix.lower() == ".txt"]
 
-    logging.info(f"Found {len(img_file_list)} images and {len(txt_file_list)} labels.")
+    print(f"Found {len(img_file_list)} images and {len(txt_file_list)} labels.")
 
     # Determine number of files for train and validation
     train_num = int(len(img_file_list) * train_percent)
     val_num = len(img_file_list) - train_num
-    logging.info(f"Splitting data: {train_num} for training, {val_num} for validation.")
+    print(f"Splitting data: {train_num} for training, {val_num} for validation.")
 
     # Shuffle and split files
     random.seed(42) 
@@ -104,7 +97,7 @@ def split_train_val(data_path, train_percent=0.8, output_dir="data"):
             txt_path = os.path.join(input_label_path, txt_fn)
 
             if not os.path.exists(txt_path):
-                logging.warning(f"Label file not found for image {img_fn}. Skipping.")
+                print(f"Label file not found for image {img_fn}. Skipping.")
                 continue
 
             label_target_dir = train_txt_path if target_dir == train_img_path else val_txt_path
@@ -112,7 +105,7 @@ def split_train_val(data_path, train_percent=0.8, output_dir="data"):
                 shutil.copy(img, os.path.join(target_dir, img_fn))  # Copy image
                 shutil.copy(txt_path, os.path.join(label_target_dir, txt_fn))  # Copy label
             except Exception as e:
-                logging.error(f"Error copying file {img_fn}: {e}")
+                print(f"Error copying file {img_fn}: {e}")
 
     print("Data split complete! Check the 'train/' and 'validation/' folders.")
 
