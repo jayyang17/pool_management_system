@@ -3,6 +3,8 @@ import cv2
 import numpy as np
 import albumentations as A
 from pathlib import Path
+import random
+import shutil
 
 # Define a constant for the target size
 TARGET_SIZE = 640
@@ -149,6 +151,9 @@ def augment_images(resize_img_dir, resize_labels_dir,augmented_img_dir, augmente
     Bounding boxes are converted from YOLO (normalized) to COCO (absolute) for augmentation,
     then converted back to YOLO format.
     """
+    os.makedirs(augmented_img_dir, exist_ok=True)
+    os.makedirs(augmented_labels_dir, exist_ok=True)
+
     img_size = 640
     transform = A.Compose([
         A.HorizontalFlip(p=0.5),
@@ -207,4 +212,55 @@ def augment_images(resize_img_dir, resize_labels_dir,augmented_img_dir, augmente
                 f.write(f"{class_id} {' '.join(map(str, yolo_bbox))}\n")
 
         print(f"Augmented: {img_path.name} --> {aug_img_path.name}")
+
+
+def balance_dataset(
+        resized_img_dir,
+        resized_labels_dir,
+        augmented_img_dir,
+        augmented_labels_dir,
+        training_img_dir,
+        training_labels_dir,
+        ratio_original=0.3, 
+        total_samples=None):
+    """
+    Creates a balanced training dataset by copying a weighted mix of original and augmented images and labels.
+    If total_samples is not specified, use all available images
+    """
+
+    # Create training directories if they don't exist
+    os.makedirs(training_img_dir, exist_ok=True)
+    os.makedirs(training_labels_dir, exist_ok=True)
+
+    # Get lists of images
+    orig_images = list(Path(resized_img_dir).glob("*.jpg"))
+    aug_images  = list(Path(augmented_img_dir).glob("*.jpg"))
+
+    # If total_samples is not specified, use all available images
+    if total_samples is None:
+        total_samples = len(orig_images) + len(aug_images)
+
+    # Compute the number of images for each set
+    num_orig = int(total_samples * ratio_original)
+    num_aug  = total_samples - num_orig
+
+    # Sample images from each list; if not enough images exist, take them all
+    chosen_orig = orig_images if len(orig_images) <= num_orig else random.sample(orig_images, num_orig)
+    chosen_aug  = aug_images  if len(aug_images)  <= num_aug  else random.sample(aug_images, num_aug)
+
+    # Copy original images and their labels
+    for img_path in chosen_orig:
+        shutil.copy(str(img_path), training_img_dir)
+        label_file = Path(resized_labels_dir) / (img_path.stem + ".txt")
+        if label_file.exists():
+            shutil.copy(str(label_file), training_labels_dir)
+
+    # Copy augmented images and their labels
+    for img_path in chosen_aug:
+        shutil.copy(str(img_path), training_img_dir)
+        label_file = Path(augmented_labels_dir) / (img_path.stem + ".txt")
+        if label_file.exists():
+            shutil.copy(str(label_file), training_labels_dir)
+
+    print(f"Balanced dataset created with {len(chosen_orig)} original and {len(chosen_aug)} augmented images.")
 
