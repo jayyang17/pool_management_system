@@ -1,78 +1,64 @@
-
 import cv2
-import torch
+import time
 import numpy as np
-# Parse user inputs
+from ultralytics import YOLO
+
+# Configuration: change these paths to point to your model and video file.
 model_path = r"C:\Users\User\Python\pool_management_system\model\train\weights\best.pt"
 video_path = r"C:\Users\User\Python\pool_management_system\test_videos\videoplayback.mp4"
 
+# Load YOLO model
+model = YOLO(model_path, task="detect")
+labels = model.names  # Get class names
 
-
-# Load your trained model
-import torch
-from ultralytics.nn.tasks import DetectionModel  # Import the DetectionModel class
-
-# Use add_safe_globals to allow the DetectionModel during loading.
-with torch.serialization.add_safe_globals([DetectionModel]):
-    model = torch.load(model_path, weights_only=True)  # Load with weights_only=True
-
-model.eval()  # Set the model to evaluation mode
-
-# Open your video file
+# Open the video file
 cap = cv2.VideoCapture(video_path)
 if not cap.isOpened():
     print("Error: Could not open video.")
     exit()
 
-# Prepare to write the output video
-frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-fps = cap.get(cv2.CAP_PROP_FPS)
-out = cv2.VideoWriter("output_video.avi", cv2.VideoWriter_fourcc(*"XVID"), fps, (frame_width, frame_height))
+# Optionally, you can record the output by uncommenting the next block.
+# frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+# frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+# fps = cap.get(cv2.CAP_PROP_FPS)
+# out = cv2.VideoWriter("output_video.avi", cv2.VideoWriter_fourcc(*"XVID"), fps, (frame_width, frame_height))
 
 while True:
     ret, frame = cap.read()
     if not ret:
+        print("End of video or error reading frame.")
         break
 
-    # Preprocess the frame:
-    # Convert BGR to RGB and resize to the input dimensions expected by your model (e.g., 640x640)
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    resized_frame = cv2.resize(rgb_frame, (640, 640))
-    input_tensor = torch.from_numpy(resized_frame).permute(2, 0, 1).float() / 255.0  # Normalize to [0,1]
-    input_tensor = input_tensor.unsqueeze(0)  # Add batch dimension
+    # Run inference on the current frame
+    results = model(frame, verbose=False)
+    detections = results[0].boxes  # Get bounding boxes from the first result
 
-    # Inference
-    with torch.no_grad():
-        outputs = model(input_tensor)
+    # Loop over detections and draw bounding boxes if confidence > 0.5
+    for detection in detections:
+        # Get bounding box coordinates and convert to int
+        xyxy = detection.xyxy.cpu().numpy().squeeze()
+        # In case there's only one detection, ensure we have 1D array with at least 4 elements.
+        if xyxy.ndim == 0 or xyxy.shape[0] < 4:
+            continue
+        xmin, ymin, xmax, ymax = map(int, xyxy[:4])
+        conf = detection.conf.item()
+        cls = int(detection.cls.item())
 
-    # Postprocessing (this section is model-specific; adjust based on your output format)
-    # Here, assume outputs is a list/array of detections per image, where each detection is
-    # [x1, y1, x2, y2, confidence, class]
-    # Also assume coordinates are relative to the resized frame dimensions.
-    # You may need to rescale coordinates to match the original frame size.
-    for det in outputs[0]:  # Loop over detections for the first (and only) image in the batch
-        x1, y1, x2, y2, conf, cls = det
-        if conf > 0.5:  # Confidence threshold
-            # Scale coordinates back to original frame dimensions if necessary
-            x_scale = frame_width / 640
-            y_scale = frame_height / 640
-            x1 = int(x1 * x_scale)
-            y1 = int(y1 * y_scale)
-            x2 = int(x2 * x_scale)
-            y2 = int(y2 * y_scale)
+        if conf > 0.5:
+            # Draw the bounding box and label on the frame.
+            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
+            label = f"{labels[cls]}: {conf:.2f}"
+            cv2.putText(frame, label, (xmin, ymin - 10), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5, (0, 255, 0), 2)
 
-            # Draw bounding box and label
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            label = f"Class {int(cls)}: {conf:.2f}"
-            cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-    # Write the processed frame to the output video and display it
-    out.write(frame)
-    cv2.imshow("Inference", frame)
+    # Display the inference results.
+    cv2.imshow("YOLO Inference", frame)
+    # Uncomment the next line if you set up recording.
+    # out.write(frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 cap.release()
-out.release()
+# If recording, release the recorder:
+# out.release()
 cv2.destroyAllWindows()
