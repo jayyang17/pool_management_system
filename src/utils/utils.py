@@ -166,29 +166,29 @@ def save_model(source_train_dir="/content/runs/detect/train",
     print(f"Model files saved successfully at: {output_dir}")
 
 
-def zip_model(output_dir="/content/model", zip_path="/content/model.zip"):
+def zip_model(model_dir="/content/model", zip_path="/content/model.zip"):
     """
     Zips the saved YOLO model and training results.
     """
 
-    output_dir = Path(output_dir)
+    model_dir = Path(model_dir)
     zip_path = Path(zip_path)
 
-    if not output_dir.exists():
-        raise FileNotFoundError(f"Model directory not found: {output_dir}")
+    if not model_dir.exists():
+        raise FileNotFoundError(f"Model directory not found: {model_dir}")
 
     # Create the zip file
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
         # Add model.pt
-        model_file = output_dir / "model.pt"
+        model_file = model_dir / "model.pt"
         if model_file.exists():
             zipf.write(model_file, arcname="model.pt")
         else:
             print(f"Warning: {model_file} not found, skipping model.pt in zip.")
 
         # Add train directory recursively
-        train_copy_path = output_dir / "train"
+        train_copy_path = model_dir / "train"
         for file in train_copy_path.rglob("*"):
-            zipf.write(file, arcname=str(file.relative_to(output_dir)))
+            zipf.write(file, arcname=str(file.relative_to(model_dir)))
 
     print(f"Model zipped successfully at: {zip_path}")
