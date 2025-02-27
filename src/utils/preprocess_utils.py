@@ -4,70 +4,112 @@ import numpy as np
 import albumentations as A
 from pathlib import Path
 
-def resize_with_padding(image, target_size=640):
+# Define a constant for the target size
+TARGET_SIZE = 640
+
+def resize_with_padding(image, target_size=TARGET_SIZE):
     """
     Resizes an image while maintaining aspect ratio and adding padding.
+    Returns the padded image, scale factor, x and y offsets,
+    new dimensions, and the original width and height.
     """
     h, w = image.shape[:2]
     scale = target_size / max(h, w)
     new_w, new_h = int(w * scale), int(h * scale)
 
+    # Resize the image while keeping the aspect ratio
     resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+
+    # Create a blank image with a gray background
     padded_image = np.full((target_size, target_size, 3), 114, dtype=np.uint8)
 
-    x_offset, y_offset = (target_size - new_w) // 2, (target_size - new_h) // 2
-    padded_image[y_offset:y_offset + new_h, x_offset:x_offset + new_w] = resized
+    # Center the resized image in the padded image
+    x_offset = (target_size - new_w) // 2
+    y_offset = (target_size - new_h) // 2
+    padded_image[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = resized
 
-    return padded_image, scale, x_offset, y_offset
+    return padded_image, scale, x_offset, y_offset, new_w, new_h, w, h
 
-def adjust_yolo_labels(label_path, scale, x_offset, y_offset, orig_w, orig_h, target_size=640):
+def adjust_yolo_labels(label_path, scale, x_offset, y_offset, orig_w, orig_h, target_size=TARGET_SIZE):
     """
-    Reads YOLO labels, rescales them, and saves the adjusted labels.
+    Reads YOLO labels from the given path, rescales them for the new image size,
+    and returns the adjusted labels as a list of strings.
     """
     new_bboxes = []
+    if not label_path.exists():
+        return []
 
     with open(label_path, "r") as f:
-        for line in f:
+        for line in f.readlines():
             parts = line.strip().split()
-            class_id, x_center, y_center, width, height = parts[0], *map(float, parts[1:])
+            if len(parts) != 5:
+                continue  # Skip lines that don't match expected format
 
-            # Convert YOLO normalized format to absolute pixel values
-            x_center_abs, y_center_abs = x_center * orig_w, y_center * orig_h
-            width_abs, height_abs = width * orig_w, height * orig_h
+            class_id = parts[0]
+            x_center, y_center, width, height = map(float, parts[1:])
 
-            # Apply scaling and shifting
+            # Convert normalized YOLO coordinates to absolute pixel values
+            x_center_abs = x_center * orig_w
+            y_center_abs = y_center * orig_h
+            width_abs = width * orig_w
+            height_abs = height * orig_h
+
+            # Scale and shift the coordinates for the resized image
             x_center_new = (x_center_abs * scale + x_offset) / target_size
             y_center_new = (y_center_abs * scale + y_offset) / target_size
             width_new = (width_abs * scale) / target_size
             height_new = (height_abs * scale) / target_size
 
+            # Clamp values to [0, 1]
+            x_center_new = max(0, min(1, x_center_new))
+            y_center_new = max(0, min(1, y_center_new))
+            width_new = max(0, min(1, width_new))
+            height_new = max(0, min(1, height_new))
+
             new_bboxes.append(f"{class_id} {x_center_new} {y_center_new} {width_new} {height_new}\n")
 
     return new_bboxes
 
-def process_dataset(original_img_dir, resized_img_dir, resized_labels_dir, yolo_labels_dir, target_size=640):
+def process_dataset(original_img_dir, resized_img_dir, resized_labels_dir, yolo_labels_dir):
     """
-    Resizes images, adjusts YOLO labels, and saves them.
+    Processes a dataset by resizing images with padding and adjusting corresponding YOLO labels.
+    Ensures that destination directories exist.
     """
-    for img_path in Path(original_img_dir).glob("*.jpg"):  # Adjust extension if needed
+    # Create destination directories if they don't exist
+    os.makedirs(resized_img_dir, exist_ok=True)
+    os.makedirs(resized_labels_dir, exist_ok=True)
+
+    # Allow common image extensions
+    image_extensions = ["*.jpg", "*.jpeg", "*.png"]
+    image_files = []
+    for ext in image_extensions:
+        image_files.extend(Path(original_img_dir).glob(ext))
+
+    for img_path in image_files:
         img = cv2.imread(str(img_path))
+        if img is None:
+            print(f"Failed to load image: {img_path.name}")
+            continue
 
         # Resize and pad image
-        resized_img, scale, x_offset, y_offset = resize_with_padding(img, target_size)
+        (resized_img, scale, x_offset, y_offset, new_w, new_h, 
+         orig_w, orig_h) = resize_with_padding(img, TARGET_SIZE)
 
         # Save resized image
-        cv2.imwrite(str(Path(resized_img_dir) / img_path.name), resized_img)
+        resized_img_path = Path(resized_img_dir) / img_path.name
+        cv2.imwrite(str(resized_img_path), resized_img)
 
-        # Adjust YOLO labels
+        # Adjust YOLO labels if the label file exists
         label_path = Path(yolo_labels_dir) / (img_path.stem + ".txt")
-        if label_path.exists():
-            new_bboxes = adjust_yolo_labels(label_path, scale, x_offset, y_offset, img.shape[1], img.shape[0], target_size)
-            if new_bboxes:
-                with open(Path(resized_labels_dir) / label_path.name, "w") as f:
-                    f.writelines(new_bboxes)
+        new_bboxes = adjust_yolo_labels(label_path, scale, x_offset, y_offset, orig_w, orig_h, TARGET_SIZE)
 
-        print(f"Resized {img_path.name}")
+        # Save updated labels if any bounding boxes were adjusted
+        if new_bboxes:
+            resized_label_path = Path(resized_labels_dir) / (img_path.stem + ".txt")
+            with open(resized_label_path, "w") as f:
+                f.writelines(new_bboxes)
 
+        print(f"Processed {img_path.name}")
 
 # augment functions
 
