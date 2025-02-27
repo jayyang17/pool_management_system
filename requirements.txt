@@ -3,9 +3,18 @@ torch
 torchvision
 onnx>=1.12.0
 onnxruntime
-numpy
-albumentations
-opencv-python
 matplotlib
-ultralytics
 ipykernel
+
+# Numpy must be between 1.26.4 and 2.0.0 for label-studio, label-studio-sdk, and ultralytics.
+numpy>=1.26.4,<2.0.0
+
+# On Windows, use opencv-python (with GUI support); on other platforms, use opencv-python-headless.
+opencv-python>=4.9.0.80; sys_platform=="win32"
+opencv-python-headless>=4.9.0.80; sys_platform!="win32"
+
+albucore==0.0.23
+albumentations==2.0.4
+label-studio==1.16.0
+label-studio-sdk==1.0.10
+ultralytics==8.3.78

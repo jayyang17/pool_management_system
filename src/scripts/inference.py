@@ -1,85 +1,64 @@
-import torch
 import cv2
+import time
 import numpy as np
-import onnxruntime as ort
+from ultralytics import YOLO
 
+# Configuration: change these paths to point to your model and video file.
+model_path = r"C:\Users\User\Python\pool_management_system\model\train\weights\best.pt"
+video_path = r"C:\Users\User\Python\pool_management_system\test_videos\videoplayback.mp4"
 
-# Load your PyTorch model
-model = torch.load("models/model.pt")
-model.eval()
+# Load YOLO model
+model = YOLO(model_path, task="detect")
+labels = model.names  # Get class names
 
-# Create a dummy input tensor with the expected input size (e.g., 1x3x640x640)
-dummy_input = torch.randn(1, 3, 640, 640)
-
-# Export the model to ONNX
-torch.onnx.export(model, dummy_input, "models/model.onnx",
-                  opset_version=11,
-                  input_names=["input"],
-                  output_names=["output"],
-                  dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}})
-
-
-# Load the ONNX model using ONNX Runtime
-session = ort.InferenceSession("models/model.onnx")
-input_name = session.get_inputs()[0].name
-
-# Define video paths
-video_path = "data/input_video.mp4"  # Replace with your input video file
+# Open the video file
 cap = cv2.VideoCapture(video_path)
 if not cap.isOpened():
     print("Error: Could not open video.")
     exit()
 
-# Prepare to write the output video
-frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-fps = cap.get(cv2.CAP_PROP_FPS)
-out = cv2.VideoWriter("data/output_video.avi", cv2.VideoWriter_fourcc(*"XVID"), fps, (frame_width, frame_height))
+# Optionally, you can record the output by uncommenting the next block.
+# frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+# frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+# fps = cap.get(cv2.CAP_PROP_FPS)
+# out = cv2.VideoWriter("output_video.avi", cv2.VideoWriter_fourcc(*"XVID"), fps, (frame_width, frame_height))
 
 while True:
     ret, frame = cap.read()
     if not ret:
+        print("End of video or error reading frame.")
         break
 
-    # Preprocessing:
-    # Convert frame from BGR to RGB, resize, normalize, and convert to numpy array in CHW format.
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    resized_frame = cv2.resize(rgb_frame, (640, 640))
-    input_tensor = resized_frame.astype(np.float32) / 255.0  # Normalize to [0,1]
-    input_tensor = np.transpose(input_tensor, (2, 0, 1))       # Convert from HWC to CHW
-    input_tensor = np.expand_dims(input_tensor, axis=0)        # Add batch dimension
+    # Run inference on the current frame
+    results = model(frame, verbose=False)
+    detections = results[0].boxes  # Get bounding boxes from the first result
 
-    # Run inference using the ONNX model
-    outputs = session.run(None, {input_name: input_tensor})
-    
-    # Assume outputs[0] contains detections for the batch in the form:
-    # [[x1, y1, x2, y2, confidence, class], ...]
-    detections = outputs[0]
+    # Loop over detections and draw bounding boxes if confidence > 0.5
+    for detection in detections:
+        # Get bounding box coordinates and convert to int
+        xyxy = detection.xyxy.cpu().numpy().squeeze()
+        # In case there's only one detection, ensure we have 1D array with at least 4 elements.
+        if xyxy.ndim == 0 or xyxy.shape[0] < 4:
+            continue
+        xmin, ymin, xmax, ymax = map(int, xyxy[:4])
+        conf = detection.conf.item()
+        cls = int(detection.cls.item())
 
-    # Postprocessing: Draw detections on the original frame.
-    # Adjust coordinates from the resized 640x640 image back to the original frame dimensions.
-    for det in detections[0]:
-        x1, y1, x2, y2, conf, cls = det
-        if conf > 0.5:  # Confidence threshold; adjust as needed
-            x_scale = frame_width / 640
-            y_scale = frame_height / 640
-            x1 = int(x1 * x_scale)
-            y1 = int(y1 * y_scale)
-            x2 = int(x2 * x_scale)
-            y2 = int(y2 * y_scale)
+        if conf > 0.5:
+            # Draw the bounding box and label on the frame.
+            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
+            label = f"{labels[cls]}: {conf:.2f}"
+            cv2.putText(frame, label, (xmin, ymin - 10), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5, (0, 255, 0), 2)
 
-            # Draw bounding box and label
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            label = f"Class {int(cls)}: {conf:.2f}"
-            cv2.putText(frame, label, (x1, max(y1 - 10, 0)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-
-    # Write the processed frame to the output video and display it
-    out.write(frame)
-    cv2.imshow("ONNX Inference", frame)
+    # Display the inference results.
+    cv2.imshow("YOLO Inference", frame)
+    # Uncomment the next line if you set up recording.
+    # out.write(frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 cap.release()
-out.release()
+# If recording, release the recorder:
+# out.release()
 cv2.destroyAllWindows()
