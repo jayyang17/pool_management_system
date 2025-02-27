@@ -45,7 +45,7 @@ def adjust_yolo_labels(label_path, scale, x_offset, y_offset, orig_w, orig_h, ta
 
     return new_bboxes
 
-def resize_images(original_img_dir, resized_img_dir, resized_labels_dir, yolo_labels_dir, target_size=640):
+def process_dataset(original_img_dir, resized_img_dir, resized_labels_dir, yolo_labels_dir, target_size=640):
     """
     Resizes images, adjusts YOLO labels, and saves them.
     """
