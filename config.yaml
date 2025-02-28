@@ -3,6 +3,9 @@ BASE_DIR: "."
 ARTIFACT_DIR: "./artifact"
 ORIGINAL_PATH: "./artifact/original_data"
 
+# Label studio zip path
+RAW_DATA_PATH: "./artifact/data.zip"
+
 # Original data paths (from Label Studio)
 ORIGINAL_IMG_DIR: "./artifact/original_data/images"    # Images from Label Studio
 YOLO_LABELS_DIR: "./artifact/original_data/labels"      # YOLO labels from Label Studio
@@ -22,8 +25,9 @@ TRAINING_LABELS_DIR: "./artifact/training/labels"
 # Other paths
 SOURCE_TRAIN_DIR: "./runs/detect/train"
 MODEL_OUTPUT_DIR: "./model"
-ZIP_PATH: "./model.zip"
 DATA_PATH: "./data"
+
+ZIP_MODEL_PATH: "./model.zip"
 CLASSES_TXT_PATH: "./artifact/original_data/classes.txt"
 DATA_YAML_PATH: "./data.yaml"
 
