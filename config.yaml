@@ -28,21 +28,21 @@ CLASSES_TXT_PATH: "./artifact/original_data/classes.txt"
 DATA_YAML_PATH: "./data.yaml"
 
 # MODEL & TRAINING CONFIGURATIONS
-model:
+MODEL:
   pretrain_model: "yolo11s.pt"
   model_weights: "best.pt"
 
 # Training parameters
-training:
+TRAINING:
   num_epochs: 100
   img_size: 640
 
 # Data splitting ratios
-data_split:
+DATA_SPLIT:
   img_balance_ratio: 0.5
   train_ratio: 0.8
 
 # INFERENCE CONFIGURATIONS
-inference:
+INFERENCE:
   conf_threshold: 0.4
   iou_threshold: 0.5
