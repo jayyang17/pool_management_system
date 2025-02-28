@@ -1,7 +1,48 @@
-dataset:
-  path: "/content/data"
-  train: "train/images"
-  val: "validation/images"
+# PATH CONFIGURATIONS
+BASE_DIR: "."
+ARTIFACT_DIR: "./artifact"
+ORIGINAL_PATH: "./artifact/original_data"
 
+# Original data paths (from Label Studio)
+ORIGINAL_IMG_DIR: "./artifact/original_data/images"    # Images from Label Studio
+YOLO_LABELS_DIR: "./artifact/original_data/labels"      # YOLO labels from Label Studio
+
+# Resized data paths (before augmentation)
+RESIZED_IMG_DIR: "./artifact/resized/resized_images"    # Resized images
+RESIZED_LABELS_DIR: "./artifact/resized/resized_labels"   # Updated YOLO labels
+
+# Augmented data paths
+AUGMENTED_IMG_DIR: "./artifact/augmented/augmented_images"    # Augmented images
+AUGMENTED_LABELS_DIR: "./artifact/augmented/augmented_labels"   # Augmented YOLO labels
+
+# Target training directories
+TRAINING_IMG_DIR: "./artifact/training/images"
+TRAINING_LABELS_DIR: "./artifact/training/labels"
+
+# Other paths
+SOURCE_TRAIN_DIR: "./runs/detect/train"
+MODEL_OUTPUT_DIR: "./model"
+ZIP_PATH: "./model.zip"
+DATA_PATH: "./data"
+CLASSES_TXT_PATH: "./artifact/original_data/classes.txt"
+DATA_YAML_PATH: "./data.yaml"
+
+# MODEL & TRAINING CONFIGURATIONS
 model:
-  path: "model/model.pt"
+  pretrain_model: "yolo11s.pt"
+  model_weights: "best.pt"
+
+# Training parameters
+training:
+  num_epochs: 100
+  img_size: 640
+
+# Data splitting ratios
+data_split:
+  img_balance_ratio: 0.5
+  train_ratio: 0.8
+
+# INFERENCE CONFIGURATIONS
+inference:
+  conf_threshold: 0.4
+  iou_threshold: 0.5
