@@ -22,14 +22,18 @@ AUGMENTED_LABELS_DIR: "./artifact/augmented/augmented_labels"   # Augmented YOLO
 TRAINING_IMG_DIR: "./artifact/training/images"
 TRAINING_LABELS_DIR: "./artifact/training/labels"
 
+DATA_PATH: "./data"
+DATA_YAML_PATH: "./data.yaml"
+
+# Model Output
+MODEL_OUTPUT_DIR: "./model"
+MODEL_OUTPUT_PATH: "./model/model.pt"
+
 # Other paths
 SOURCE_TRAIN_DIR: "./runs/detect/train"
-MODEL_OUTPUT_DIR: "./model"
-DATA_PATH: "./data"
 
 ZIP_MODEL_PATH: "./model.zip"
 CLASSES_TXT_PATH: "./artifact/original_data/classes.txt"
-DATA_YAML_PATH: "./data.yaml"
 
 # MODEL & TRAINING CONFIGURATIONS
 MODEL:
@@ -50,3 +54,8 @@ DATA_SPLIT:
 INFERENCE:
   conf_threshold: 0.4
   iou_threshold: 0.5
+
+# MODEL OUTPUT
+SOURCE_TRAIN_DIR: ".runs/detect/train"
+MODEL_WEIGHTS: "best.pt"
+MODEL_OUTPUT_DIR: "./final_model"
