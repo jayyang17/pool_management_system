@@ -10,3 +10,4 @@ yolov8m.pt
 yolov8n.pt
 notebook
 templates
+.env
