@@ -2,10 +2,7 @@ import cv2
 import time
 import numpy as np
 from ultralytics import YOLO
-
-import cv2
-import numpy as np
-from ultralytics import YOLO
+from pathlib import Path
 
 def load_model(model_path):
     """
@@ -73,54 +70,38 @@ def read_image(model, image_bytes, imgsz=640, conf_threshold=0.5 ):
 
 
     return img
-import cv2
-import time
-import numpy as np
-from ultralytics import YOLO
 
-def run_inference_on_video(model, video_path, output_video_path, imgsz=640, conf_threshold=0.5):
-    """
-    Runs YOLO inference on a video file, writes processed frames to an output video file,
-    and returns the output video path.
 
-    Returns:
-      str: The path to the output video file.
+# Global stop flag
+stop_flag = False  
+
+def run_inference_on_video(model, video_path, imgsz=640, conf_threshold=0.5):
     """
+    Runs YOLO inference on a video file and displays the output in real-time.
+    Stops when `stop_flag` is set to True.
+    """
+    global stop_flag
     labels = model.names
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         print("Error: Could not open video.")
-        return None
+        return
 
-    # Read first frame to get dimensions and fps
-    ret, frame = cap.read()
-    if not ret:
-        print("Error: Could not read video frame.")
-        return None
-
-    original_h, original_w = frame.shape[:2]
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0  # fallback fps=30.0 if not available
-
-    # Prepare VideoWriter with original dimensions
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(output_video_path, fourcc, fps, (original_w, original_h))
-
-    # Reset video capture to beginning
-    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
     frame_count = 0
     start_time = time.time()
 
     while True:
+        if stop_flag:
+            print("Inference stopped by API.")
+            break
+
         ret, frame = cap.read()
         if not ret:
             print("End of video or error reading frame.")
             break
 
-        # Save original frame dimensions for scaling
         original_h, original_w = frame.shape[:2]
-
-        # Resize frame for inference
         resized_frame = cv2.resize(frame, (imgsz, imgsz))
         results = model(resized_frame, verbose=False)
         detections = results[0].boxes
@@ -144,18 +125,37 @@ def run_inference_on_video(model, video_path, output_video_path, imgsz=640, conf
                 color = (0, 255, 255) if cls == 0 else (0, 255, 100)
                 cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), color, 2)
                 label = f"{labels.get(cls, str(cls))}: {conf:.2f}"
-                cv2.putText(frame, label, (xmin, max(ymin - 10, 10)), 
+                cv2.putText(frame, label, (xmin, max(ymin - 10, 10)),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-        # Optional: overlay FPS info on the frame
         frame_count += 1
         elapsed = time.time() - start_time
         fps_text = frame_count / elapsed if elapsed > 0 else 0
-        cv2.putText(frame, f"FPS: {fps_text:.2f}", (10, 30), 
+        cv2.putText(frame, f"FPS: {fps_text:.2f}", (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
 
-        out.write(frame)
+        cv2.imshow("YOLO Inference", frame)
+        
+        # Stop on 'q' if running locally
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
     cap.release()
-    out.release()
-    return output_video_path
+    cv2.destroyAllWindows()
+    print("Video display finished.")
+
+
+
+if __name__ == "__main__":
+    # ✅ Use forward slashes or raw string to avoid escape sequence issues
+    model_path = Path(r"final_model/train/weights/best.pt").resolve()
+    
+    # ✅ Load the model first
+    model = load_model(str(model_path))
+
+    # ✅ Use raw strings for video paths
+    video_path = r"C:\Users\User\Python\pool_management_system\test_videos\clip4.mp4"
+    out_video_path = r"C:\Users\User\Python\pool_management_system\test_videos\infer_clip4.mp4"
+
+    # ✅ Pass the LOADED MODEL, not model_path
+    run_inference_on_video(model, video_path)

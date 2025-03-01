@@ -9,7 +9,6 @@ import tempfile
 from src.scripts.inference import load_model, read_image, run_inference_on_video
 import cv2
 import numpy as np
-import base64
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -32,9 +31,6 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-# Set up templates
-templates = Jinja2Templates(directory="templates")
-
 # Model path
 MODEL_PATH = Path(os.getenv("MODEL_PATH", "final_model/train/weights/best.pt")).resolve()
 logger.info(f"Using YOLO model from: {MODEL_PATH}")
@@ -52,7 +48,7 @@ async def index():
     """Redirects to API docs."""
     return RedirectResponse(url="/docs")
 
-@app.post("/predict/")
+@app.post("/predict/image/")
 async def predict(
     request: Request,
     file: UploadFile = File(...),
@@ -93,6 +89,8 @@ async def predict_video(
     Accepts a video file, runs YOLO inference frame-by-frame,
     and returns the processed video as a response.
 
+    Press "Q" to quit the video
+
     Query Parameters:
     - `conf_threshold` (float, default=0.5): Minimum confidence to display detections.
     
@@ -117,7 +115,7 @@ async def predict_video(
         temp_output.close()
 
         # Run inference on video: this function writes processed frames to temp_output_path.
-        run_inference_on_video(model, temp_input_path, temp_output_path, conf_threshold=conf_threshold, imgsz=640)
+        run_inference_on_video(model, temp_input_path, conf_threshold=conf_threshold, imgsz=640)
 
         # Read the processed video and return it as the response
         with open(temp_output_path, "rb") as processed_video:
@@ -131,4 +129,4 @@ async def predict_video(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
