@@ -7,6 +7,11 @@ matplotlib
 ipykernel
 boto3
 awscli
+fastapi
+uvicorn
+python-multipart
+dotenv
+
 # Numpy must be between 1.26.4 and 2.0.0 for label-studio, label-studio-sdk, and ultralytics.
 numpy>=1.26.4,<2.0.0
 
