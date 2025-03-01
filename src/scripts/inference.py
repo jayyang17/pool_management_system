@@ -3,62 +3,88 @@ import time
 import numpy as np
 from ultralytics import YOLO
 
-# Configuration: change these paths to point to your model and video file.
-model_path = r"C:\Users\User\Python\pool_management_system\model\train\weights\best.pt"
-video_path = r"C:\Users\User\Python\pool_management_system\test_videos\videoplayback.mp4"
+def run_inference_on_video(model_path, video_path, imgsz=640, conf_threshold=0.5, display=True):
+    """
+    Runs YOLO inference on a video file.
+    
+    Parameters:
+      model_path (str): Path to the YOLO model (.pt file).
+      video_path (str): Path to the video file.
+      imgsz (int): Input size for inference (e.g., 640).
+      conf_threshold (float): Confidence threshold for displaying detections.
+      display (bool): Whether to display the results.
+    """
+    # Load the pretrained YOLO model (assumes it was trained on imgsz x imgsz images)
+    model = YOLO(model_path, task="detect")
+    labels = model.names
 
-# Load YOLO model
-model = YOLO(model_path, task="detect")
-labels = model.names  # Get class names
+    # Open the video file
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print("Error: Could not open video.")
+        return
 
-# Open the video file
-cap = cv2.VideoCapture(video_path)
-if not cap.isOpened():
-    print("Error: Could not open video.")
-    exit()
+    # Variables for FPS calculation
+    frame_count = 0
+    start_time = time.time()
 
-# Optionally, you can record the output by uncommenting the next block.
-# frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-# frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-# fps = cap.get(cv2.CAP_PROP_FPS)
-# out = cv2.VideoWriter("output_video.avi", cv2.VideoWriter_fourcc(*"XVID"), fps, (frame_width, frame_height))
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("End of video or error reading frame.")
+            break
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        print("End of video or error reading frame.")
-        break
+        # Save original dimensions to scale detection coordinates later
+        original_h, original_w = frame.shape[:2]
+        # Resize frame to imgsz x imgsz (same as training preprocessing)
+        resized_frame = cv2.resize(frame, (imgsz, imgsz))
+        
+        # Run inference on the resized frame
+        results = model(resized_frame, verbose=False)
+        detections = results[0].boxes
 
-    # Run inference on the current frame
-    results = model(frame, verbose=False)
-    detections = results[0].boxes  # Get bounding boxes from the first result
+        # Loop through detections and draw bounding boxes if confidence is high enough
+        for detection in detections:
+            xyxy = detection.xyxy.cpu().numpy().squeeze()
+            if xyxy.ndim == 0 or xyxy.shape[0] < 4:
+                continue
+            xmin, ymin, xmax, ymax = map(int, xyxy[:4])
+            conf = detection.conf.item()
+            cls = int(detection.cls.item())
 
-    # Loop over detections and draw bounding boxes if confidence > 0.5
-    for detection in detections:
-        # Get bounding box coordinates and convert to int
-        xyxy = detection.xyxy.cpu().numpy().squeeze()
-        # In case there's only one detection, ensure we have 1D array with at least 4 elements.
-        if xyxy.ndim == 0 or xyxy.shape[0] < 4:
-            continue
-        xmin, ymin, xmax, ymax = map(int, xyxy[:4])
-        conf = detection.conf.item()
-        cls = int(detection.cls.item())
+            if conf > conf_threshold:
+                # Scale coordinates back to the original frame size
+                scale_x = original_w / imgsz
+                scale_y = original_h / imgsz
+                xmin = int(xmin * scale_x)
+                ymin = int(ymin * scale_y)
+                xmax = int(xmax * scale_x)
+                ymax = int(ymax * scale_y)
+                
+                # Draw bounding box and label
+                color = (0, 255, 255) if cls == 0 else (0, 255, 100)
+                cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), color, 2)
+                label = f"{labels[cls]}: {conf:.2f}"
+                cv2.putText(frame, label, (xmin, max(ymin - 10, 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-        if conf > 0.5:
-            # Draw the bounding box and label on the frame.
-            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 2)
-            label = f"{labels[cls]}: {conf:.2f}"
-            cv2.putText(frame, label, (xmin, ymin - 10), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5, (0, 255, 0), 2)
+        # Calculate FPS and overlay it on the frame
+        frame_count += 1
+        elapsed = time.time() - start_time
+        fps = frame_count / elapsed if elapsed > 0 else 0
+        cv2.putText(frame, f"FPS: {fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
 
-    # Display the inference results.
-    cv2.imshow("YOLO Inference", frame)
-    # Uncomment the next line if you set up recording.
-    # out.write(frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+        if display:
+            cv2.imshow("YOLO Inference", frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
-cap.release()
-# If recording, release the recorder:
-# out.release()
-cv2.destroyAllWindows()
+    cap.release()
+    if display:
+        cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    # Change these paths as needed.
+    model_path = r"C:\Users\User\Python\pool_management_system\model\train\weights\best.pt"
+    video_path = r"C:\Users\User\Python\pool_management_system\test_videos\clip4.mp4"
+    
+    run_inference_on_video(model_path, video_path)

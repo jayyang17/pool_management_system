@@ -2,3 +2,9 @@ test_images
 test_videos
 data
 venv
+model
+artifact
+runs
+final_model
+yolov8m.pt
+yolov8n.pt

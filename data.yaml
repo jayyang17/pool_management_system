@@ -1,0 +1,7 @@
+path: C:\Users\User\Python\pool_management_system\data
+train: train/images
+val: validation/images
+nc: 2
+names:
+- occupied
+- empty
