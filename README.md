@@ -16,7 +16,7 @@ This project provides an end-to-end AI-powered system for monitoring resort pool
 This repository supports an end-to-end training pipeline designed to optimize the model for accurate pool chair detection and occupancy analysis.
 
 ### 1. Data Annotation  
-- Annotate raw video frames using [LabelStudio](https://github.com/heartexlabs/label-studio) with a YOLO-compatible format.
+- Annotate raw video frames using LabelStudio with a YOLO-compatible format.
 
 ### 2. Preprocessing  
 - Resize all annotated images to 640x640 pixels to standardize input dimensions.
@@ -33,3 +33,17 @@ This repository supports an end-to-end training pipeline designed to optimize th
 To initiate the complete training process, execute:
 ```bash
 python main.py --train
+```
+
+This command triggers the workflow—from data annotation, preprocessing, and augmentation to model training.  
+Training parameters can be adjusted directly in `main.py` to suit your dataset and experimental requirements.
+
+## Inference  
+The system includes an inference API to process video inputs and return real-time occupancy analytics.
+
+### 1. FastAPI Server Setup  
+Start the FastAPI server by running:
+
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
