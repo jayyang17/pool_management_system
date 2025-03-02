@@ -47,3 +47,28 @@ Start the FastAPI server by running:
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
+
+The API will be available at **[http://localhost:8000](http://localhost:8000).**
+
+## Video Upload & Processing  
+Users can upload a video file through the provided interface.  
+The API processes the video by:  
+- Extracting frames  
+- Applying the YOLOv8 model for detection  
+- Evaluating occupancy based on the overlap of detected persons and chairs  
+
+---
+
+## Limitations & Future Work  
+While the current implementation effectively supports both training and real-time video inference, the following enhancements are recommended for future iterations:
+
+### **Potential Enhancements**  
+- **Enhanced Deployment**: Automate deployment using **Docker, GitHub Actions, and AWS (ECR/EC2)** for better scalability and maintenance.  
+- **Real-Time Optimization**: Optimize the video processing pipeline for **faster inference and real-time performance**.  
+- **Advanced Analytics & Dashboard Integration**: Develop a **dashboard for visualizing real-time occupancy analytics and historical trends**.  
+- **Occupancy Metrics Extraction**: Implement tracking of:  
+  - Number of pool chairs detected  
+  - Count of occupied chairs  
+  - Overall occupancy rate  
+- **Data Logging for Analytics**: Store logs for future data analytics and trend analysis.  
+- **Refined Detection Logic**: Improve the overlap detection algorithm—**potentially incorporating motion tracking**—to further boost accuracy.  
