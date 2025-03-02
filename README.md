@@ -32,7 +32,7 @@ This repository supports an end-to-end training pipeline designed to optimize th
 #### Running the Training Pipeline  
 To initiate the complete training process, execute:
 ```bash
-python main.py --train
+python main.py 
 ```
 
 This command triggers the workflow—from data annotation, preprocessing, and augmentation to model training.  
@@ -71,4 +71,4 @@ While the current implementation effectively supports both training and real-tim
   - Count of occupied chairs  
   - Overall occupancy rate  
 - **Data Logging for Analytics**: Store logs for future data analytics and trend analysis.  
-- **Refined Detection Logic**: Improve the overlap detection algorithm—**potentially incorporating motion tracking**—to further boost accuracy.  
+- **Refined Detection Logic**: Improve the overlap detection algorithm to further boost accuracy.  
