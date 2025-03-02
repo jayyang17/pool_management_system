@@ -4,19 +4,16 @@ from pathlib import Path
 from fastapi import FastAPI, File, UploadFile, Request, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
 import tempfile
 from src.scripts.inference import load_model, read_image, run_inference_on_video
 import cv2
 import numpy as np
+from ultralytics.utils.downloads import download
+from ultralytics import YOLO
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
-
-# Load environment variables
-from dotenv import load_dotenv
-load_dotenv()
 
 # FastAPI app setup
 app = FastAPI(title="YOLOv8 Inference API", version="1.0")
@@ -31,17 +28,13 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-# Model path
-MODEL_PATH = Path(os.getenv("MODEL_PATH", "final_model/train/weights/best.pt")).resolve()
+# Download model from S3 and load YOLO model
+S3_MODEL = "https://poolmanagementsystem.s3.ap-southeast-1.amazonaws.com/final_model/train/weights/best.pt"
+download_path = download(S3_MODEL, dir="weights/")
+MODEL_PATH = "weights/best.pt"
 logger.info(f"Using YOLO model from: {MODEL_PATH}")
-
-# Load YOLO model at startup
-try:
-    model = load_model(str(MODEL_PATH))
-    logger.info("YOLO model loaded successfully")
-except Exception as e:
-    logger.error(f"Model loading failed: {e}")
-    model = None  # Prevent crashes if model isn't found
+print(MODEL_PATH)
+model = load_model(MODEL_PATH)
 
 @app.get("/", tags=["root"])
 async def index():
@@ -55,27 +48,17 @@ async def predict(
     conf_threshold: float = 0.5 
 ):
     """
-    Accepts an image file, runs YOLO inference, and returns an HTML page with the processed image.
-    
-    Query Parameters:
-    - `conf_threshold` (float, default=0.5): Minimum confidence score to display detections.
-
-    Returns:
-    - An HTML page displaying the processed image and detected objects.
+    Accepts an image file, runs YOLO inference, and returns the processed image.
     """
     if model is None:
         return {"error": "🚨 Model is not loaded. Check logs for issues."}
-
     try:
         # Read and process image
         image_bytes = await file.read()
         processed_img = read_image(model, image_bytes, conf_threshold=conf_threshold)
-
         # Encode the processed image as JPEG
         _, encoded_image = cv2.imencode('.jpg', processed_img)
-
         return Response(content=encoded_image.tobytes(), media_type="image/jpeg")
-
     except Exception as e:
         logger.error(f"Inference failed: {e}")
         return {"error": str(e)}
@@ -88,14 +71,8 @@ async def predict_video(
     """
     Accepts a video file, runs YOLO inference frame-by-frame,
     and returns the processed video as a response.
-
-    Press "Q" to quit the video
-
-    Query Parameters:
-    - `conf_threshold` (float, default=0.5): Minimum confidence to display detections.
     
-    Returns:
-    - A video (mp4) with bounding boxes drawn on each frame.
+    This endpoint assumes that run_inference_on_video (unchanged) writes the processed video to "processed_video.mp4".
     """
     if model is None:
         return {"error": "Model is not loaded. Check logs for issues."}
@@ -108,24 +85,46 @@ async def predict_video(
         with open(temp_input_path, "wb") as f:
             f.write(await file.read())
         logger.info(f"Video saved to temp file: {temp_input_path}")
-
-        # Create a temporary file for the processed output video
-        temp_output = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-        temp_output_path = temp_output.name
-        temp_output.close()
-
-        # Run inference on video: this function writes processed frames to temp_output_path.
+        
+        # Run inference on video.
+        # We are not modifying run_inference_on_video; it is expected to write output to "processed_video.mp4"
         run_inference_on_video(model, temp_input_path, conf_threshold=conf_threshold, imgsz=640)
-
+        
+        # Define the output file path (as written by run_inference_on_video)
+        output_video_path = "processed_video.mp4"
+        
         # Read the processed video and return it as the response
-        with open(temp_output_path, "rb") as processed_video:
+        with open(output_video_path, "rb") as processed_video:
             video_bytes = processed_video.read()
-
+        
+        # Cleanup temporary files
+        os.remove(temp_input_path)
+        logger.info(f"Deleted temporary input file: {temp_input_path}")
+        os.remove(output_video_path)
+        logger.info(f"Deleted output video file: {output_video_path}")
+        
         return Response(content=video_bytes, media_type="video/mp4")
-
+    
     except Exception as e:
         logger.error(f"Video inference failed: {e}")
         return {"error": str(e)}
+
+@app.on_event("shutdown")
+def cleanup_model():
+    """Deletes the downloaded model when the FastAPI app shuts down."""
+    try:
+        if os.path.exists(MODEL_PATH):
+            os.remove(MODEL_PATH)
+            logger.info(f"Deleted model file: {MODEL_PATH}")
+        
+        # Remove the weights directory if empty
+        weights_dir = Path("weights/")
+        if weights_dir.exists() and not any(weights_dir.iterdir()):
+            os.rmdir(weights_dir)
+            logger.info(f"Deleted empty weights directory: {weights_dir}")
+    
+    except Exception as e:
+        logger.error(f"Failed to delete model file: {e}")
 
 if __name__ == "__main__":
     import uvicorn

@@ -2,7 +2,7 @@ test_images
 test_videos
 data
 venv
-model
+final_model
 artifact
 runs
 final_model
