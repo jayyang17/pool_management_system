@@ -3,7 +3,7 @@
 ## Overview  
 This project provides an end-to-end AI-powered system for monitoring resort pool occupancy by analyzing video feeds. It detects pool chairs and determines their occupancy status in real time. The system is built on YOLOv8 and served via a FastAPI backend, enabling users to simply upload a video file for processing.
 
-https://colab.research.google.com/github/username/resort-pool-management/blob/main/notebooks/colab_notebook.ipynb
+https://colab.research.google.com/github/jayyang17/pool_management_system/blob/main/notebook/colab_notebook.ipynb
 
 ## Technical Stack  
 - **Model**: YOLOv8 fine-tuned on real-world images and synthetic images (created through Gemini)  
