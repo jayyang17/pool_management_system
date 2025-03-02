@@ -18,7 +18,7 @@ https://colab.research.google.com/github/jayyang17/pool_management_system/blob/m
 This repository supports an end-to-end training pipeline designed to optimize the model for accurate pool chair detection and occupancy analysis.
 
 ### 1. Data Annotation  
-- Annotate raw video frames using LabelStudio with a YOLO-compatible format.
+- Annotate raw images using LabelStudio with a YOLO-compatible format.
 
 ### 2. Preprocessing  
 - Resize all annotated images to 640x640 pixels to standardize input dimensions.
@@ -52,7 +52,7 @@ The system includes an inference API to process video inputs and return real-tim
 Start the FastAPI server by running:
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8000
+uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
 The API will be available at **[http://localhost:8000](http://localhost:8000).**
