@@ -52,7 +52,7 @@ The system includes an inference API to process video inputs and return real-tim
 Start the FastAPI server by running:
 
 ```bash
-uvicorn app:app --host 0.0.0.0 --port 8000
+uvicorn app:app --host 127.0.0.1 --port 8000
 ```
 
 The API will be available at **[http://localhost:8000](http://localhost:8000).**
