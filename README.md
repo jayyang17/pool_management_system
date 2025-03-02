@@ -30,11 +30,16 @@ This repository supports an end-to-end training pipeline designed to optimize th
 - Running the training script executes the preprocessing, augmentation, and training steps sequentially.
 
 #### Running the Training Pipeline  
-To initiate the complete training process, execute:
+To initiate training with preprocessing and ingestion:
 ```bash
-python main.py 
+python main.py --ingest --preprocess --train
 ```
+#### Uploading Trained Model to S3 (Optional)  
+If you want to sync the trained model to an S3 bucket, add the `--upload` flag:
 
+```bash
+python main.py --upload
+```
 This command triggers the workflow—from data annotation, preprocessing, and augmentation to model training.  
 Training parameters can be adjusted directly in `main.py` to suit your dataset and experimental requirements.
 
