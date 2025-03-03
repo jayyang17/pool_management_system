@@ -1,4 +1,4 @@
-# AI-Powered Resort Pool Management System
+# Pool Side Chair Occupancy Tracker
 
 ## Overview  
 This project provides an end-to-end AI-powered system for monitoring resort pool occupancy by analyzing video feeds. It detects pool chairs and determines their occupancy status in real time. The system is built on YOLOv8 and served via a FastAPI backend, enabling users to simply upload a video file for processing.
