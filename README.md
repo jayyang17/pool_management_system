@@ -18,7 +18,20 @@ For an easier setup and to leverage TPU for faster processing, you can run the c
 
 Open the Colab notebook: 
 https://colab.research.google.com/github/jayyang17/pool_management_system/blob/main/notebook/colab_notebook.ipynb
+
 Follow the instructions in the notebook to run the training and prediction.
+## Running the Code Locally
+### Clone the Repository
+Open terminal and run the following
+```bash
+git clone https://github.com/jayyang17/pool_management_system.git
+```
+
+### Install Dependencies
+```bash
+cd pool_management_system
+pip install -r requirements.txt
+```
 
 ## Training Process  
 This repository supports an end-to-end training pipeline designed to optimize the model for accurate pool chair detection and occupancy analysis.
