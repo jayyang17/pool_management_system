@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI, File, UploadFile, Request, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse
+from fastapi.responses import JSONResponse
 import tempfile
 from src.scripts.inference import load_model, read_image, run_inference_on_video
 import cv2
@@ -63,6 +64,7 @@ async def predict(
         logger.error(f"Inference failed: {e}")
         return {"error": str(e)}
 
+
 @app.post("/predict/video/")
 async def predict_video(
     file: UploadFile = File(...),
@@ -70,13 +72,11 @@ async def predict_video(
 ):
     """
     Accepts a video file, runs YOLO inference frame-by-frame,
-    and returns the processed video as a response.
-    
-    This endpoint assumes that run_inference_on_video (unchanged) writes the processed video to "processed_video.mp4".
+    and returns detected objects in JSON format.
     """
     if model is None:
         return {"error": "Model is not loaded. Check logs for issues."}
-    
+
     try:
         # Save the uploaded video to a temporary file
         temp_input = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
@@ -85,29 +85,19 @@ async def predict_video(
         with open(temp_input_path, "wb") as f:
             f.write(await file.read())
         logger.info(f"Video saved to temp file: {temp_input_path}")
-        
-        # Run inference on video.
-        # We are not modifying run_inference_on_video; it is expected to write output to "processed_video.mp4"
-        run_inference_on_video(model, temp_input_path, conf_threshold=conf_threshold, imgsz=640)
-        
-        # Define the output file path (as written by run_inference_on_video)
-        output_video_path = "processed_video.mp4"
-        
-        # Read the processed video and return it as the response
-        with open(output_video_path, "rb") as processed_video:
-            video_bytes = processed_video.read()
-        
-        # Cleanup temporary files
+
+        # Run inference and collect detection results
+        detections = run_inference_on_video(model, temp_input_path, conf_threshold=conf_threshold, imgsz=640)
+
+        # Cleanup temporary file
         os.remove(temp_input_path)
         logger.info(f"Deleted temporary input file: {temp_input_path}")
-        os.remove(output_video_path)
-        logger.info(f"Deleted output video file: {output_video_path}")
-        
-        return Response(content=video_bytes, media_type="video/mp4")
-    
+
+        return JSONResponse(content={"detections": detections})
+
     except Exception as e:
-        logger.error(f"Video inference failed: {e}")
-        return {"error": str(e)}
+        logger.error(f"Error processing video: {str(e)}")
+        return JSONResponse(content={"error": "Failed to process video"}, status_code=500)
 
 @app.on_event("shutdown")
 def cleanup_model():
