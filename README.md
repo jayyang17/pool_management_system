@@ -14,6 +14,13 @@ https://colab.research.google.com/github/jayyang17/pool_management_system/blob/m
   - `fastapi` (for serving the model)  
   - `opencv-python` (for video processing)
 
+## Running the Code in Google Colab
+For an easier setup and to leverage TPU for faster processing, you can run the code in Google Colab. This is especially useful for users who may not have a powerful local machine.
+
+Open the Colab notebook: 
+https://colab.research.google.com/github/jayyang17/pool_management_system/blob/main/notebook/colab_notebook.ipynb
+Follow the instructions in the notebook to run the training and prediction.
+
 ## Training Process  
 This repository supports an end-to-end training pipeline designed to optimize the model for accurate pool chair detection and occupancy analysis.
 
