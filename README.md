@@ -15,11 +15,11 @@ Note: This project is currently a Proof of Concept (PoC) for object detection. T
 
 ## Running the Code in Google Colab
 For an easier setup and to leverage TPU for faster processing, you can run the code in Google Colab. This is especially useful for users who may not have a powerful local machine.
+-Follow the instructions in the notebook to run the training and prediction.
 
 Open the Colab notebook: 
 https://colab.research.google.com/github/jayyang17/pool_management_system/blob/main/notebook/colab_notebook.ipynb
 
-Follow the instructions in the notebook to run the training and prediction.
 ## Running the Code Locally
 ### Clone the Repository
 Open terminal and run the following
